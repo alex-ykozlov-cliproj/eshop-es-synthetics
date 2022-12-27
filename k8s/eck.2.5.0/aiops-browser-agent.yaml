@@ -1,0 +1,29 @@
+apiVersion: agent.k8s.elastic.co/v1alpha1
+kind: Agent
+metadata: 
+  name: aiops-browser
+spec:
+  version: 8.5.2
+  image: "docker.elastic.co/beats/elastic-agent-complete:8.5.2"
+  kibanaRef:
+    name: aiops
+  fleetServerRef: 
+    name: aiops-fleet
+  mode: fleet
+  deployment:
+    replicas: 1
+    podTemplate:
+      spec:
+        securityContext:
+          runAsUser: 0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aiops-uptime
+spec:
+  selector:
+    agent.k8s.elastic.co/name: aiops-browser
+  ports:
+  - protocol: TCP
+    port: 8200

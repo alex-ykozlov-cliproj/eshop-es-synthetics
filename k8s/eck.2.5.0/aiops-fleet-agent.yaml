@@ -1,0 +1,65 @@
+---
+apiVersion: agent.k8s.elastic.co/v1alpha1
+kind: Agent
+metadata:
+  name: aiops-fleet
+spec:
+  version: 8.5.2
+  #version: 8.0.0
+  #version: 8.0.0-rc2
+  #version: 7.16.2
+  kibanaRef:
+    name: "aiops"
+  elasticsearchRefs:
+  - name: "aiops"
+  mode: fleet
+  fleetServerEnabled: true
+  deployment:
+    replicas: 1
+    podTemplate:
+      spec:
+        serviceAccountName: aiops-fleet
+        automountServiceAccountToken: true
+        securityContext:
+          runAsUser: 0
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aiops-fleet
+rules:
+- apiGroups: [""]
+  resources:
+  - pods
+  - nodes
+  - namespaces
+  verbs:
+  - get
+  - watch
+  - list
+- apiGroups: ["coordination.k8s.io"]
+  resources:
+  - leases
+  verbs:
+  - get
+  - create
+  - update
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aiops-fleet
+  namespace: es
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: aiops-fleet
+subjects:
+- kind: ServiceAccount
+  name: aiops-fleet
+  namespace: es
+roleRef:
+  kind: ClusterRole
+  name: aiops-fleet
+  apiGroup: rbac.authorization.k8s.io

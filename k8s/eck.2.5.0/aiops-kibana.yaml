@@ -1,0 +1,86 @@
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: aiops
+spec:
+  version: 8.5.2
+  #version: 7.16.2
+  #version: 8.0.0-beta1
+  #version: 8.0.0-rc2
+  #http:
+  #  tls:
+  #    selfSignedCertificate:
+  #      disabled: true
+  #monitoring:
+  #  metrics:
+  #    elasticsearchRefs:
+  #    - name: aiops
+  #      namespace: es 
+  #  logs:
+  #    elasticsearchRefs:
+  #    - name: aiops
+  #      namespace: es   
+  count: 1
+  elasticsearchRef:
+    name: "aiops"
+  config:
+    xpack.fleet.agents.elasticsearch.hosts: ["https://aiops-es-http.es.svc:9200"]
+    xpack.fleet.agents.fleet_server.hosts: ["https://aiops-fleet-agent-http.es.svc:8220"]
+    xpack.fleet.packages:
+    - name: system
+      version: latest
+    - name: elastic_agent
+      version: latest
+    - name: fleet_server
+      version: latest
+    - name: apm
+      version: latest
+    - name: kubernetes
+      # pinning this version as the next one introduced a kube-proxy host setting default that breaks this recipe,
+      # see https://github.com/elastic/integrations/pull/1565 for more details
+      version: 0.14.0
+    xpack.fleet.agentPolicies:
+    - name: Fleet Server on ECK policy
+      id: eck-fleet-server
+      is_default_fleet_server: true
+      namespace: default
+      monitoring_enabled:
+      - logs
+      - metrics
+      package_policies:
+      - name: fleet_server-1
+        id: fleet_server-1
+        package:
+          name: fleet_server
+    - name: K8S Agent on ECK policy
+      id: eck-k8s-agent    
+      is_default: false
+      unenroll_timeout: 900
+      package_policies:
+      - package:
+          name: system
+        name: system-1
+      - package:
+          name: kubernetes
+        name: kubernetes-1     
+  podTemplate:
+    metadata:
+      labels:
+        my.custom.domain/label: "label-value"
+      annotations:
+        my.custom.domain/annotation: "annotation-value"
+    spec:
+      containers:
+        - name: kibana
+          env:
+            - name: LOGGING_VERBOSE
+              value: "false"
+            - name: NODE_OPTIONS
+              value: "--max-old-space-size=2048"
+          resources:
+            requests:
+              memory: 3Gi
+              cpu: 0.5
+            limits:
+              memory: 3Gi
+              cpu: 2
